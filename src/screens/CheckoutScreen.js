@@ -9,6 +9,13 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+const METODE_PEMBAYARAN = [
+  { id: "cash", label: "Tunai", keterangan: "Bayar di kasir" },
+  { id: "qris", label: "QRIS", keterangan: "Scan kode QRIS" },
+  { id: "debit", label: "Kartu Debit", keterangan: "Visa / Mastercard" },
+  { id: "ewallet", label: "E-Wallet", keterangan: "GoPay / OVO / Dana" },
+];
+
 export default function CheckoutScreen({ route, navigation }) {
   // Ambil data via route.params
   const { nama = "Kopi Pilihan", harga = 0, jumlah = 1 } = route.params || {};
@@ -19,8 +26,10 @@ export default function CheckoutScreen({ route, navigation }) {
   // Terapkan useState 'isSubmitted' (default: false)
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [transactionCode, setTransactionCode] = useState("");
+  const [selectedMetode, setSelectedMetode] = useState(null);
 
   const handleKonfirmasi = () => {
+    if (!selectedMetode) return;
     setTransactionCode(`#KL-${Math.floor(1000 + Math.random() * 9000)}`);
     setIsSubmitted(true);
   };
@@ -28,6 +37,9 @@ export default function CheckoutScreen({ route, navigation }) {
   const formatRupiah = (val) => {
     return "Rp " + Number(val).toLocaleString("id-ID");
   };
+
+  const metodeLabel =
+    METODE_PEMBAYARAN.find((m) => m.id === selectedMetode)?.label || "-";
 
   return (
     <SafeAreaView style={styles.container} edges={["bottom", "left", "right"]}>
@@ -82,6 +94,13 @@ export default function CheckoutScreen({ route, navigation }) {
             <Text style={styles.itemValue}>{jumlah} cup</Text>
           </View>
 
+          {isSubmitted && (
+            <View style={styles.rowItem}>
+              <Text style={styles.itemLabel}>Metode Pembayaran</Text>
+              <Text style={styles.itemValueBold}>{metodeLabel}</Text>
+            </View>
+          )}
+
           <View style={styles.separator} />
 
           <View style={styles.rowItemTotal}>
@@ -107,14 +126,60 @@ export default function CheckoutScreen({ route, navigation }) {
           )}
         </View>
 
+        {/* Pemilihan Metode Pembayaran */}
+        {!isSubmitted && (
+          <View style={styles.cardMetode}>
+            <Text style={styles.cardTitle}>Metode Pembayaran</Text>
+            <View style={styles.metodeGrid}>
+              {METODE_PEMBAYARAN.map((metode) => {
+                const isActive = selectedMetode === metode.id;
+                return (
+                  <TouchableOpacity
+                    key={metode.id}
+                    style={[styles.metodeItem, isActive && styles.metodeItemActive]}
+                    activeOpacity={0.75}
+                    onPress={() => setSelectedMetode(metode.id)}
+                  >
+                    <Text
+                      style={[
+                        styles.metodeLabel,
+                        isActive && styles.metodeLabelActive,
+                      ]}
+                    >
+                      {metode.label}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.metodeKeterangan,
+                        isActive && styles.metodeKeteranganActive,
+                      ]}
+                    >
+                      {metode.keterangan}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            {!selectedMetode && (
+              <Text style={styles.warningMetode}>
+                Pilih metode pembayaran untuk melanjutkan.
+              </Text>
+            )}
+          </View>
+        )}
+
         {/* Action Buttons */}
         <View style={styles.actionContainer}>
           {!isSubmitted ? (
             // Tombol Konfirmasi Pesanan (mengubah isSubmitted menjadi true)
             <TouchableOpacity
-              style={styles.btnKonfirmasi}
-              activeOpacity={0.8}
+              style={[
+                styles.btnKonfirmasi,
+                !selectedMetode && styles.btnKonfirmasiDisabled,
+              ]}
+              activeOpacity={selectedMetode ? 0.8 : 1}
               onPress={handleKonfirmasi}
+              disabled={!selectedMetode}
             >
               <Text style={styles.btnKonfirmasiText}>Konfirmasi Pesanan</Text>
             </TouchableOpacity>
@@ -309,6 +374,62 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#A04000",
   },
+  // --- Metode Pembayaran ---
+  cardMetode: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: "#2C1810",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: "#EDE7E1",
+  },
+  metodeGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  metodeItem: {
+    width: "47%",
+    borderWidth: 1.5,
+    borderColor: "#D7CCC8",
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    backgroundColor: "#FAFAF8",
+  },
+  metodeItemActive: {
+    borderColor: "#4E342E",
+    backgroundColor: "#F5EBE0",
+  },
+  metodeLabel: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#4E342E",
+    marginBottom: 2,
+  },
+  metodeLabelActive: {
+    color: "#2C1810",
+  },
+  metodeKeterangan: {
+    fontSize: 11,
+    color: "#8D6E63",
+  },
+  metodeKeteranganActive: {
+    color: "#6D4C41",
+  },
+  warningMetode: {
+    marginTop: 12,
+    fontSize: 12,
+    color: "#B25000",
+    textAlign: "center",
+    fontWeight: "500",
+  },
+  // --- Action Buttons ---
   actionContainer: {
     gap: 12,
   },
@@ -322,6 +443,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 5,
     elevation: 3,
+  },
+  btnKonfirmasiDisabled: {
+    backgroundColor: "#BCAAA4",
+    shadowOpacity: 0,
+    elevation: 0,
   },
   btnKonfirmasiText: {
     color: "#FFFFFF",
